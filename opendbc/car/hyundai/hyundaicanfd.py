@@ -2,6 +2,7 @@ from opendbc.car import CanBusBase
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.common.numpy_fast import clip
 from opendbc.car.hyundai.values import HyundaiFlags
+import cereal.messaging as messaging
 
 
 class CanBus(CanBusBase):
@@ -120,6 +121,17 @@ def create_lfahda_cluster(packer, CAN, enabled):
   }
   return packer.make_can_msg("LFAHDA_CLUSTER", CAN.ECAN, values)
 
+def read_variables_from_file(file_path):
+  variables = {}
+  with open(file_path, 'r') as file:
+    for line in file:
+      line = line.strip()
+      if not line or len(line.split()) != 2:
+        continue
+      name, value = line.split()
+      variables[name] = int(value)
+  return variables
+
 def create_msg_161(packer, CAN, enabled, msg_161, car_params, hud_control, car_state, car_control, frame, msg_1B5):
   values = msg_161.copy()
 
@@ -155,10 +167,10 @@ def create_msg_161(packer, CAN, enabled, msg_161, car_params, hud_control, car_s
 
   # LANE DEPARTURE
   # if hud_control.leftLaneDepart:
-  if msg_1B5["LEFT_LDW"]:
+  if msg_1B5["LEFT_LDW"] and not car_control.leftBlinker:
     values["LANELINE_LEFT"] = 4 if (frame // 50) % 2 == 0 else 1
   # if hud_control.rightLaneDepart:
-  if msg_1B5["RIGHT_LDW"]:
+  if msg_1B5["RIGHT_LDW"] and not car_control.leftBlinker:
     values["LANELINE_RIGHT"] = 4 if (frame // 50) % 2 == 0 else 1
 
   if car_params.openpilotLongitudinalControl:
@@ -187,9 +199,14 @@ def create_msg_161(packer, CAN, enabled, msg_161, car_params, hud_control, car_s
     # BACKGROUND
     values["BACKGROUND"] = 1 if enabled else 7
 
+  try:
+    values.update(read_variables_from_file('/data/openpilot/opendbc/car/hyundai/MSG_161.txt'))
+  except FileNotFoundError:
+    print('MSG_161 not ready')
+
   return packer.make_can_msg("MSG_161", CAN.ECAN, values)
 
-def create_msg_162(packer, CAN, enabled, msg_162, car_params, hud_control, msg_1B5):
+def create_msg_162(packer, CAN, enabled, msg_162, car_params, hud_control, msg_1B5, car_control):
   values = msg_162.copy()
 
   # HIDE FAULTS
@@ -201,18 +218,36 @@ def create_msg_162(packer, CAN, enabled, msg_162, car_params, hud_control, msg_1
 
   # LANE DEPARTURE
   # if hud_control.leftLaneDepart or hud_control.rightLaneDepart:
-  if msg_1B5["LEFT_LDW"] or msg_1B5["RIGHT_LDW"]:
+  if (msg_1B5["LEFT_LDW"] and not car_control.leftBlinker) or (msg_1B5["RIGHT_LDW"] and not car_control.rightBlinker):
     values["VIBRATE"] = 1
 
   if car_params.openpilotLongitudinalControl:
-    # *** TODO *** LEAD_DISTANCE/LEAD_LATERAL
+
+    sm = messaging.SubMaster(['modelV2','radarState'], poll='radarState')
+    sm.update(100)
+    if sm.updated['radarState']:
+      # print(sm['radarState'].leadOne.dRel, sm['radarState'].leadTwo.yRel)
+      values["LEAD_DISTANCE"] = 10 + max(50, min(int(sm['radarState'].leadOne.dRel * 3.28084), 1000))
+      values["LEAD_LATERAL"] = - max(-45, min(int(sm['radarState'].leadOne.yRel * 10), 45))
+      if sm['radarState'].leadTwo.dRel != 0:
+        values["LEAD_ALT_DISTANCE"] = 10 + max(50, min(int(sm['radarState'].leadTwo.dRel * 3.28084), 1000))
+        values["LEAD_ALT_LATERAL"] = - max(-45, min(int(sm['radarState'].leadTwo.yRel * 10), 45))
+        values["LEAD_ALT"] = 1
+    else:
+      values["LEAD_DISTANCE"] = 0
+
     # LEAD
     if hud_control.leadVisible:
       values["LEAD"] = 2 if enabled else 1
-      values["LEAD_DISTANCE"] = 100
-    else:
-      values["LEAD"] = 0
-      values["LEAD_DISTANCE"] = 0
+    #   values["LEAD_DISTANCE"] = 100
+    # else:
+    #   values["LEAD"] = 0
+    #   values["LEAD_DISTANCE"] = 0
+
+  try:
+    values.update(read_variables_from_file('/data/openpilot/opendbc/car/hyundai/MSG_162.txt'))
+  except FileNotFoundError:
+    print('MSG_162 not ready')
 
   return packer.make_can_msg("MSG_162", CAN.ECAN, values)
 
