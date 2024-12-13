@@ -770,6 +770,20 @@ BO_ 354 MSG_162: 32 CCNC
  SG_ FAULT_ESS : 249|3@1+ (1,0) [0|7] "" XXX
  SG_ ZEROS_14 : 252|4@1+ (1,0) [0|15] "" XXX
 
+BO_ 437 MSG_1B5: 32 XXX
+ SG_ CHECKSUM : 0|16@1+ (1,0) [0|65535] "" XXX
+ SG_ COUNTER : 16|8@1+ (1,0) [0|255] "" XXX
+ SG_ LEFT : 24|2@1+ (1,0) [0|3] "" XXX
+ SG_ LEFT_LDW : 27|1@0+ (1,0) [0|1] "" XXX
+ SG_ LEFT_DISTANCE : 29|9@1+ (1,0) [0|511] "" XXX
+ SG_ RIGHT : 96|2@1+ (1,0) [0|3] "" XXX
+ SG_ RIGHT_LDW : 99|1@0+ (1,0) [0|1] "" XXX
+ SG_ RIGHT_DISTANCE : 101|9@1+ (1,0) [0|511] "" XXX
+ SG_ NEW_SIGNAL_2 : 192|2@1+ (1,0) [0|3] "" XXX
+ SG_ NEW_SIGNAL_3 : 194|6@1+ (1,0) [0|63] "" XXX
+ SG_ NEW_SIGNAL_7 : 200|12@1+ (1,0) [0|4095] "" XXX
+ SG_ NEW_SIGNAL_1 : 213|11@1+ (1,0) [0|2047] "" XXX
+
 CM_ 272 "Alternative LKAS message, used on cars such as 2023 Ioniq 6, 2nd gen Kona. Matches LKAS except size is 32 bytes";
 CM_ 676 "Contains signals with detailed lane line information. Used by ADAS ECU on HDA 2 vehicles to operate LFA.";
 CM_ 866 "Contains signals with detailed lane line information. Used by ADAS ECU on HDA 2 vehicles to operate LFA. Used on cars that use message 272.";

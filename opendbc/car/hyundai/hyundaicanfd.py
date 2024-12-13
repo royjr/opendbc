@@ -120,7 +120,7 @@ def create_lfahda_cluster(packer, CAN, enabled):
   }
   return packer.make_can_msg("LFAHDA_CLUSTER", CAN.ECAN, values)
 
-def create_msg_161(packer, CAN, enabled, msg_161, car_params, hud_control, car_state, car_control, frame):
+def create_msg_161(packer, CAN, enabled, msg_161, car_params, hud_control, car_state, car_control, frame, msg_1B5):
   values = msg_161.copy()
 
   # HIDE ALERTS
@@ -154,9 +154,11 @@ def create_msg_161(packer, CAN, enabled, msg_161, car_params, hud_control, car_s
     })
 
   # LANE DEPARTURE
-  if hud_control.leftLaneDepart:
+  # if hud_control.leftLaneDepart:
+  if msg_1B5["LEFT_LDW"]:
     values["LANELINE_LEFT"] = 4 if (frame // 50) % 2 == 0 else 1
-  if hud_control.rightLaneDepart:
+  # if hud_control.rightLaneDepart:
+  if msg_1B5["RIGHT_LDW"]:
     values["LANELINE_RIGHT"] = 4 if (frame // 50) % 2 == 0 else 1
 
   if car_params.openpilotLongitudinalControl:
@@ -187,7 +189,7 @@ def create_msg_161(packer, CAN, enabled, msg_161, car_params, hud_control, car_s
 
   return packer.make_can_msg("MSG_161", CAN.ECAN, values)
 
-def create_msg_162(packer, CAN, enabled, msg_162, car_params, hud_control):
+def create_msg_162(packer, CAN, enabled, msg_162, car_params, hud_control, msg_1B5):
   values = msg_162.copy()
 
   # HIDE FAULTS
@@ -198,7 +200,8 @@ def create_msg_162(packer, CAN, enabled, msg_162, car_params, hud_control):
   })
 
   # LANE DEPARTURE
-  if hud_control.leftLaneDepart or hud_control.rightLaneDepart:
+  # if hud_control.leftLaneDepart or hud_control.rightLaneDepart:
+  if msg_1B5["LEFT_LDW"] or msg_1B5["RIGHT_LDW"]:
     values["VIBRATE"] = 1
 
   if car_params.openpilotLongitudinalControl:
