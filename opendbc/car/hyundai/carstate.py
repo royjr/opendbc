@@ -52,6 +52,7 @@ class CarState(CarStateBase):
     self.cruise_info = {}
     self.msg_161 = {}
     self.msg_162 = {}
+    self.msg_1B5 = {}
 
     # On some cars, CLU15->CF_Clu_VehicleSpeed can oscillate faster than the dash updates. Sample at 5 Hz
     self.cluster_speed = 0
@@ -273,6 +274,7 @@ class CarState(CarStateBase):
     if self.CP.carFingerprint in (CAR.HYUNDAI_SONATA_HEV_2024,):
       self.msg_161 = copy.copy(cp_cam.vl["MSG_161"])
       self.msg_162 = copy.copy(cp_cam.vl["MSG_162"])
+      self.msg_1B5 = copy.copy(cp_cam.vl["MSG_1B5"])
 
     return ret
 
@@ -325,6 +327,7 @@ class CarState(CarStateBase):
       cam_messages += [
         ("MSG_161", 20),
         ("MSG_162", 20),
+        ("MSG_1B5", 20),
       ]
 
     return {

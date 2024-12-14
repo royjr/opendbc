@@ -40,15 +40,19 @@ def create_steering_messages(packer, CP, CAN, enabled, lat_active, apply_steer):
   ret = []
 
   values = {
-    "LKA_MODE": 2,
-    "LKA_ICON": 2 if enabled else 1,
+    "LKA_MODE": 0,
+    "NEW_SIGNAL_1": 3 if enabled else 0,
+    "LKA_WARNING": 0,
+    "LKA_ICON": 0,
     "TORQUE_REQUEST": apply_steer,
-    "LKA_ASSIST": 0,
     "STEER_REQ": 1 if lat_active else 0,
+    "LFA_BUTTON": 0,
+    "LKA_ASSIST": 0,
     "STEER_MODE": 0,
-    "HAS_LANE_SAFETY": 0,  # hide LKAS settings
-    "NEW_SIGNAL_1": 0,
     "NEW_SIGNAL_2": 0,
+    "NEW_SIGNAL_4": 90,
+    "HAS_LANE_SAFETY": 0,  # hide LKAS settings
+    "NEW_SIGNAL_3": 70 if enabled else 100,
   }
 
   if CP.flags & HyundaiFlags.CANFD_HDA2:
@@ -115,19 +119,23 @@ def create_acc_cancel(packer, CP, CAN, cruise_info_copy):
 
 def create_lfahda_cluster(packer, CAN, enabled):
   values = {
-    "HDA_ICON": 1 if enabled else 0,
+    "NEW_SIGNAL_4": 0,
+    "NEW_SIGNAL_2": 0,
+    "HDA_ICON": 0,
+    "NEW_SIGNAL_1": 0,
     "LFA_ICON": 2 if enabled else 0,
+    "NEW_SIGNAL_3": 0,
   }
   return packer.make_can_msg("LFAHDA_CLUSTER", CAN.ECAN, values)
 
 def create_msg_161(packer, CAN, enabled, msg_161, car_params, hud_control, car_state, car_control, frame):
   values = msg_161.copy()
 
-  # HIDE ALERTS
-  if values.get("ALERTS_5") == 5:  # USE SWITCH OR PEDAL TO ACCELERATE
-    values["ALERTS_5"] = 0
-  if values.get("ALERTS_2") == 5:  # CONSIDER TAKING A BREAK
-    values.update({"ALERTS_2": 0, "SOUNDS_2": 0, "DAW_ICON": 0})
+  # # HIDE ALERTS
+  # if values.get("ALERTS_5") == 5:  # USE SWITCH OR PEDAL TO ACCELERATE
+  #   values["ALERTS_5"] = 0
+  # if values.get("ALERTS_2") == 5:  # CONSIDER TAKING A BREAK
+  #   values.update({"ALERTS_2": 0, "SOUNDS_2": 0, "DAW_ICON": 0})
 
   # LANELINES
   curvature = {
@@ -160,9 +168,9 @@ def create_msg_161(packer, CAN, enabled, msg_161, car_params, hud_control, car_s
     values["LANELINE_RIGHT"] = 4 if (frame // 50) % 2 == 0 else 1
 
   if car_params.openpilotLongitudinalControl:
-    # HIDE ALERTS
-    if values.get("ALERTS_5") == 4:  # SMART CRUISE CONTROL CONDITIONS NOT MET
-      values["ALERTS_5"] = 0
+    # # HIDE ALERTS
+    # if values.get("ALERTS_5") == 4:  # SMART CRUISE CONTROL CONDITIONS NOT MET
+    #   values["ALERTS_5"] = 0
 
     # SETSPEED
     values["SETSPEED"] = 3 if enabled else 1
@@ -192,8 +200,8 @@ def create_msg_162(packer, CAN, enabled, msg_162, car_params, hud_control):
 
   # HIDE FAULTS
   values.update({
-    "FAULT_LSS": 0,
-    "FAULT_HDA": 0,
+    # "FAULT_LSS": 0,
+    # "FAULT_HDA": 0,
     "FAULT_DAS": 0,
   })
 
@@ -212,6 +220,26 @@ def create_msg_162(packer, CAN, enabled, msg_162, car_params, hud_control):
       values["LEAD_DISTANCE"] = 0
 
   return packer.make_can_msg("MSG_162", CAN.ECAN, values)
+
+def create_msg_1B5(packer, CAN, enabled, msg_1B5):
+  values = msg_1B5.copy()
+
+  values.update({
+    "LEFT": 3,
+    "LEFT_1": 90,
+    "LEFT_2": 31,
+    "LEFT_3": 0,
+    "LEFT_4": -1033,
+    "LEFT_5": -1200,
+    "RIGHT": 3,
+    "RIGHT_1": 483,
+    "RIGHT_2": 0,
+    "RIGHT_3": 0,
+    "RIGHT_4": -1029,
+    "RIGHT_5": -1025,
+  })
+
+  return packer.make_can_msg("MSG_1B5", CAN.ECAN, values)
 
 def create_acc_control(packer, CAN, enabled, accel_last, accel, stopping, gas_override, set_speed, hud_control):
   jerk = 5
