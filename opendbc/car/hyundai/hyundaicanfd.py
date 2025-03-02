@@ -245,8 +245,9 @@ def create_spas_messages(packer, CAN, frame, left_blink, right_blink):
   elif right_blink:
     blink = 4
   values = {
-    "BLINKER_CONTROL": blink,
+    "BLINKER_CONTROL": 3,
   }
+  print("ENABLE_BLINKERS yesssss")
   ret.append(packer.make_can_msg("SPAS2", CAN.ECAN, values))
 
   return ret
