@@ -1,11 +1,16 @@
 /**
- * MADS (Modified Assistive Driving Safety) - Safety state machine.
- * Ported from sunnypilot (Copyright (c) 2021-, Haibin Wen, sunnypilot contributors, MIT License).
+ * Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
+ *
+ * This file is part of sunnypilot and is licensed under the MIT License.
+ * See the LICENSE.md file in the root directory for more details.
+ *
+ * This project uses software from Haibin Wen and SUNNYPILOT LLC and is
+ * licensed under a custom license requiring permission for use.
  */
 
 #pragma once
 
-#include "opendbc/safety/mads_declarations.h"
+#include "opendbc/safety/sunnypilot/mads_declarations.h"
 
 // ===============================
 // Global Variables
@@ -18,10 +23,10 @@ bool heartbeat_engaged_mads = false;
 uint32_t heartbeat_engaged_mads_mismatches = 0U;
 
 // ===============================
-// State Update Helpers
+// Helper Functions (called by others, must be defined first)
 // ===============================
 
-inline EdgeTransition m_get_edge_transition(const bool current, const bool last) {
+static inline EdgeTransition m_get_edge_transition(const bool current, const bool last) {
   if (current && !last) {
     return MADS_EDGE_RISING;
   } else if (!current && last) {
@@ -30,7 +35,7 @@ inline EdgeTransition m_get_edge_transition(const bool current, const bool last)
   return MADS_EDGE_NO_CHANGE;
 }
 
-inline void m_mads_state_init(void) {
+static inline void m_mads_state_init(void) {
   m_mads_state.is_vehicle_moving = false;
   m_mads_state.acc_main.current = false;
   m_mads_state.mads_button.current = MADS_BUTTON_UNAVAILABLE;
@@ -52,19 +57,33 @@ inline void m_mads_state_init(void) {
   m_mads_state.controls_allowed_lat = false;
 }
 
-inline void m_update_button_state(ButtonStateTracking *button_state) {
+static inline void m_update_button_state(ButtonStateTracking *button_state) {
   if (button_state->current != MADS_BUTTON_UNAVAILABLE) {
     button_state->transition = m_get_edge_transition(button_state->current == MADS_BUTTON_PRESSED, button_state->last == MADS_BUTTON_PRESSED);
     button_state->last = button_state->current;
   }
 }
 
-inline void m_update_binary_state(BinaryStateTracking *state) {
+static inline void m_update_binary_state(BinaryStateTracking *state) {
   state->transition = m_get_edge_transition(state->current, state->previous);
   state->previous = state->current;
 }
 
-inline void m_update_control_state(void) {
+// ===============================
+// Core Functions
+// ===============================
+
+static inline void mads_exit_controls(const DisengageReason reason) {
+  m_mads_state.current_disengage.pending_reasons |= reason;
+
+  if (m_mads_state.controls_allowed_lat) {
+    m_mads_state.current_disengage.active_reason = reason;
+    m_mads_state.controls_requested_lat = false;
+    m_mads_state.controls_allowed_lat = false;
+  }
+}
+
+static inline void m_update_control_state(void) {
   bool allowed = true;
 
   // Initial control requests from button or ACC transitions
@@ -113,7 +132,7 @@ inline void m_update_control_state(void) {
   }
 }
 
-inline void mads_heartbeat_engaged_check(void) {
+static inline void mads_heartbeat_engaged_check(void) {
   if (m_mads_state.controls_allowed_lat && !heartbeat_engaged_mads) {
     heartbeat_engaged_mads_mismatches += 1U;
     if (heartbeat_engaged_mads_mismatches >= 3U) {
@@ -124,11 +143,18 @@ inline void mads_heartbeat_engaged_check(void) {
   }
 }
 
-// ===============================
-// Function Implementations
-// ===============================
+static inline bool mads_is_lateral_control_allowed_by_mads(void) {
+  return m_mads_state.system_enabled && m_mads_state.controls_allowed_lat;
+}
 
-inline void mads_set_alternative_experience(const int *mode) {
+static inline void mads_set_system_state(const bool enabled, const bool disengage_lateral_on_brake, const bool pause_lateral_on_brake) {
+  m_mads_state_init();
+  m_mads_state.system_enabled = enabled;
+  m_mads_state.disengage_lateral_on_brake = disengage_lateral_on_brake;
+  m_mads_state.pause_lateral_on_brake = pause_lateral_on_brake;
+}
+
+static inline void mads_set_alternative_experience(const int *mode) {
   const bool mads_enabled = (*mode & ALT_EXP_ENABLE_MADS) != 0;
   const bool disengage_lateral_on_brake = (*mode & ALT_EXP_MADS_DISENGAGE_LATERAL_ON_BRAKE) != 0;
   const bool pause_lateral_on_brake = (*mode & ALT_EXP_MADS_PAUSE_LATERAL_ON_BRAKE) != 0;
@@ -136,28 +162,7 @@ inline void mads_set_alternative_experience(const int *mode) {
   mads_set_system_state(mads_enabled, disengage_lateral_on_brake, pause_lateral_on_brake);
 }
 
-inline void mads_set_system_state(const bool enabled, const bool disengage_lateral_on_brake, const bool pause_lateral_on_brake) {
-  m_mads_state_init();
-  m_mads_state.system_enabled = enabled;
-  m_mads_state.disengage_lateral_on_brake = disengage_lateral_on_brake;
-  m_mads_state.pause_lateral_on_brake = pause_lateral_on_brake;
-}
-
-inline void mads_exit_controls(const DisengageReason reason) {
-  m_mads_state.current_disengage.pending_reasons |= reason;
-
-  if (m_mads_state.controls_allowed_lat) {
-    m_mads_state.current_disengage.active_reason = reason;
-    m_mads_state.controls_requested_lat = false;
-    m_mads_state.controls_allowed_lat = false;
-  }
-}
-
-inline bool mads_is_lateral_control_allowed_by_mads(void) {
-  return m_mads_state.system_enabled && m_mads_state.controls_allowed_lat;
-}
-
-inline void mads_state_update(const bool op_vehicle_moving, const bool op_acc_main, const bool op_allowed, const bool is_braking, const bool _steering_disengage) {
+static inline void mads_state_update(const bool op_vehicle_moving, const bool op_acc_main, const bool op_allowed, const bool is_braking, const bool _steering_disengage) {
   m_mads_state.is_vehicle_moving = op_vehicle_moving;
   m_mads_state.acc_main.current = op_acc_main;
   m_mads_state.op_controls_allowed.current = op_allowed;
@@ -174,6 +179,6 @@ inline void mads_state_update(const bool op_vehicle_moving, const bool op_acc_ma
   m_update_control_state();
 }
 
-inline bool is_lat_active(void) {
+static inline bool is_lat_active(void) {
   return controls_allowed || mads_is_lateral_control_allowed_by_mads();
 }

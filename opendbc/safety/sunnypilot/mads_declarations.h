@@ -1,6 +1,11 @@
 /**
- * MADS (Modified Assistive Driving Safety) - Type definitions and declarations.
- * Ported from sunnypilot (Copyright (c) 2021-, Haibin Wen, sunnypilot contributors, MIT License).
+ * Copyright (c) 2021-, Haibin Wen, sunnypilot, and a number of other contributors.
+ *
+ * This file is part of sunnypilot and is licensed under the MIT License.
+ * See the LICENSE.md file in the root directory for more details.
+ *
+ * This project uses software from Haibin Wen and SUNNYPILOT LLC and is
+ * licensed under a custom license requiring permission for use.
  */
 
 #pragma once
@@ -76,24 +81,3 @@ typedef struct {
   bool controls_allowed_lat : 1;
 } MADSState;
 
-// ===============================
-// Global Variables
-// ===============================
-
-extern ButtonState mads_button_press;
-extern MADSState m_mads_state;
-
-extern bool heartbeat_engaged_mads;
-extern uint32_t heartbeat_engaged_mads_mismatches;
-
-// ===============================
-// Function Declarations
-// ===============================
-
-extern void mads_set_system_state(bool enabled, bool disengage_lateral_on_brake, bool pause_lateral_on_brake);
-extern void mads_set_alternative_experience(const int *mode);
-extern void mads_state_update(bool op_vehicle_moving, bool op_acc_main, bool op_allowed, bool is_braking, bool steering_disengage);
-extern void mads_exit_controls(DisengageReason reason);
-extern bool mads_is_lateral_control_allowed_by_mads(void);
-extern void mads_heartbeat_engaged_check(void);
-extern bool is_lat_active(void);
