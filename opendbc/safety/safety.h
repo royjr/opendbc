@@ -1,6 +1,7 @@
 #pragma once
 
 #include "opendbc/safety/helpers.h"
+#include "opendbc/safety/mads.h"
 #include "opendbc/safety/lateral.h"
 #include "opendbc/safety/longitudinal.h"
 #include "opendbc/safety/declarations.h"
@@ -359,6 +360,11 @@ static void generic_rx_checks(void) {
     controls_allowed = false;
   }
   steering_disengage_prev = steering_disengage;
+
+  // MADS: update lateral control state
+  if (m_mads_state.system_enabled) {
+    mads_state_update(vehicle_moving, acc_main_on, controls_allowed, brake_pressed, steering_disengage);
+  }
 }
 
 static void stock_ecu_check(bool stock_ecu_detected) {
@@ -448,6 +454,9 @@ int set_safety_hooks(uint16_t mode, uint16_t param) {
   controls_allowed = false;
   relay_malfunction_reset();
   safety_rx_checks_invalid = false;
+
+  // MADS: initialize from alternative_experience flags
+  mads_set_alternative_experience(&alternative_experience);
 
   current_safety_config.rx_checks = NULL;
   current_safety_config.rx_checks_len = 0;

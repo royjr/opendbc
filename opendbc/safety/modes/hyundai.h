@@ -144,6 +144,11 @@ static void hyundai_rx_hook(const CANPacket_t *msg) {
       update_sample(&torque_driver, torque_driver_new);
     }
 
+    // MADS: LKAS button (LFA/LDA)
+    if (msg->addr == 0x391U) {
+      mads_button_press = GET_BIT(msg, 4U) ? MADS_BUTTON_PRESSED : MADS_BUTTON_NOT_PRESSED;
+    }
+
     // ACC steering wheel buttons
     if (msg->addr == 0x4F1U) {
       int cruise_button = msg->data[0] & 0x7U;
